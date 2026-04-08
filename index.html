@@ -68,18 +68,21 @@
     }
     .h-badge strong { color: var(--accent); font-weight: 700; }
     .h-badge.total strong { color: var(--green); }
+    .header-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-header {
+      font-size: 0.72rem; color: var(--muted);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 5px 10px;
+      cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; gap: 5px;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .btn-header:hover { color: var(--text); border-color: var(--accent); }
+    .btn-header svg { flex-shrink: 0; }
 
     /* ── 検索バー ── */
-    .search-wrap { padding: 18px 0 20px; position: relative; }
-    .search-wrap::before {
-      content: '🔍';
-      position: absolute;
-      left: 13px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 0.85rem;
-      pointer-events: none;
-    }
+    .search-wrap { padding: 18px 0 20px; }
     .search-input {
       width: 100%;
       padding: 10px 14px 10px 36px;
@@ -94,6 +97,38 @@
     }
     .search-input:focus { border-color: var(--accent); }
     .search-input::placeholder { color: var(--muted); }
+    .sort-select {
+      flex-shrink: 0;
+      padding: 10px 32px 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: border-color 0.15s;
+    }
+    .sort-select:focus { border-color: var(--accent); }
+    .search-wrap { display: flex; gap: 10px; align-items: center; }
+    .search-wrap::before { top: 50%; transform: translateY(-50%); }
+    .search-input-wrap { position: relative; flex: 1; }
+    .search-input-wrap::before {
+      content: '🔍';
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+    .search-input { width: 100%; box-sizing: border-box; }
 
     /* ── グリッド ── */
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
@@ -205,37 +240,44 @@
       border-radius: 4px;
     }
 
-    /* カードメニュー */
-    .card-menu-wrap { position: absolute; top: 8px; right: 8px; z-index: 5; }
-    .btn-menu {
-      background: rgba(13,17,23,0.7);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 6px;
-      width: 30px; height: 30px;
-      cursor: pointer; color: #94a3b8; font-size: 1rem;
+    /* カードアクション */
+    .card-actions {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 10px; margin-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .purchase-check {
+      display: flex; align-items: center; gap: 7px;
+      cursor: pointer; user-select: none;
+      font-size: 0.78rem; color: var(--muted);
+      transition: color 0.15s;
+    }
+    .purchase-check:hover { color: var(--text); }
+    .purchase-check input[type="checkbox"] { display: none; }
+    .check-box {
+      width: 17px; height: 17px; flex-shrink: 0;
+      border: 1.5px solid var(--border); border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .purchase-check input:checked + .check-box {
+      background: var(--green); border-color: var(--green);
+    }
+    .purchase-check input:checked + .check-box::after {
+      content: '✓'; color: #0d1117; font-size: 10px; font-weight: 900; line-height: 1;
+    }
+    .purchase-check input:checked ~ .check-label { color: var(--green); }
+    .card-icon-btns { display: flex; gap: 2px; }
+    .btn-icon {
+      width: 30px; height: 30px; border: none; background: none;
+      color: var(--muted); cursor: pointer; border-radius: 6px;
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, color 0.15s;
     }
-    .btn-menu:hover { background: rgba(13,17,23,0.9); color: white; }
-    .dropdown {
-      position: absolute; top: calc(100% + 4px); right: 0;
-      background: var(--surface-h);
-      border: 1px solid var(--border-h);
-      border-radius: 8px; overflow: hidden;
-      min-width: 130px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-      display: none; z-index: 10;
-    }
-    .dropdown.open { display: block; }
-    .dd-item {
-      display: block; width: 100%; padding: 10px 14px;
-      font-size: 0.8rem; color: var(--text);
-      background: none; border: none; text-align: left;
-      cursor: pointer; font-family: inherit;
-      transition: background 0.1s;
-    }
-    .dd-item:hover { background: rgba(255,255,255,0.06); }
-    .dd-item.danger { color: var(--red); }
+    .btn-icon:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+    .btn-icon.hold-active { color: #f59e0b; }
+    .btn-icon.hold-active:hover { color: #fbbf24; }
+    .btn-icon.danger:hover { color: var(--red); background: rgba(239,68,68,0.1); }
 
     /* カード本体 */
     .card-body { padding: 13px 15px 15px; cursor: default; display: flex; flex-direction: column; flex: 1; }
@@ -247,9 +289,20 @@
     }
     .card-memo {
       font-size: 0.75rem; color: var(--muted);
-      line-height: 1.5; margin-bottom: 6px;
-      display: -webkit-box; -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical; overflow: hidden;
+      line-height: 1.5; margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid var(--border);
+      outline: none; cursor: text; border-radius: 4px;
+      min-height: 1.5em; white-space: pre-wrap; word-break: break-word;
+      transition: background 0.15s, padding 0.15s;
+    }
+    .card-memo:empty::before {
+      content: attr(data-placeholder);
+      color: var(--muted); opacity: 0.4; pointer-events: none;
+    }
+    .card-memo:focus {
+      background: rgba(255,255,255,0.04);
+      padding: 5px 7px; margin: 10px -7px 0;
+      overflow: visible; display: block;
     }
     .card-meta {
       font-size: 0.67rem; color: var(--muted);
@@ -491,14 +544,39 @@
         <h1>ほしいものリスト</h1>
         <p>あなたの欲しいものを、すべてここに。</p>
       </div>
-      <div class="header-badges">
-        <div class="h-badge"><strong id="stat-count">0</strong> アイテム</div>
-        <div class="h-badge total">合計 <strong id="stat-total">¥0</strong></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
+        <div class="header-badges">
+          <div class="h-badge"><strong id="stat-count">0</strong> アイテム</div>
+          <div class="h-badge total">合計 <strong id="stat-total">¥0</strong></div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-header" onclick="exportData()">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M7 1v8M4 6l3 3 3-3"/><path d="M2 10v2h10v-2"/></svg>
+            エクスポート
+          </button>
+          <button class="btn-header" onclick="document.getElementById('import-input').click()">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M7 9V1M4 4l3-3 3 3"/><path d="M2 10v2h10v-2"/></svg>
+            インポート
+          </button>
+          <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(this)">
+        </div>
       </div>
     </header>
 
     <div class="search-wrap">
-      <input class="search-input" id="search" type="search" placeholder="商品名・サイト名で検索...">
+      <div class="search-input-wrap">
+        <input class="search-input" id="search" type="search" placeholder="商品名・サイト名で検索...">
+      </div>
+      <select class="sort-select" id="sort-select">
+        <option value="manual">ソート解除（手動順）</option>
+        <option value="price-desc">価格：高い順</option>
+        <option value="price-asc">価格：低い順</option>
+        <option value="added-desc">追加日：新しい順</option>
+        <option value="added-asc">追加日：古い順</option>
+        <option value="updated-desc">更新日：新しい順</option>
+        <option value="updated-asc">更新日：古い順</option>
+        <option value="name-asc">名前順</option>
+      </select>
     </div>
 
     <div class="grid" id="grid"></div>
@@ -665,6 +743,48 @@
       query = e.target.value.trim().toLowerCase();
       render();
     });
+
+    // ── ソート ──────────────────────────────────────────────────
+    let sortKey = 'manual';
+    document.getElementById('sort-select').addEventListener('change', e => {
+      sortKey = e.target.value;
+      render();
+    });
+
+    function lastUpdated(item) {
+      if (item.prices?.length) return item.prices.at(-1).date;
+      return item.addedAt || '0000-00-00';
+    }
+    function latestPrice(item) {
+      return item.prices?.length ? item.prices.at(-1).price : null;
+    }
+    function applySort(arr) {
+      if (sortKey === 'manual') return arr;
+      return [...arr].sort((a, b) => {
+        switch (sortKey) {
+          case 'price-desc': {
+            const pa = latestPrice(a), pb = latestPrice(b);
+            if (pa === null && pb === null) return 0;
+            if (pa === null) return 1;
+            if (pb === null) return -1;
+            return pb - pa;
+          }
+          case 'price-asc': {
+            const pa = latestPrice(a), pb = latestPrice(b);
+            if (pa === null && pb === null) return 0;
+            if (pa === null) return 1;
+            if (pb === null) return -1;
+            return pa - pb;
+          }
+          case 'added-desc': return (b.addedAt || '').localeCompare(a.addedAt || '');
+          case 'added-asc':  return (a.addedAt || '').localeCompare(b.addedAt || '');
+          case 'updated-desc': return lastUpdated(b).localeCompare(lastUpdated(a));
+          case 'updated-asc':  return lastUpdated(a).localeCompare(lastUpdated(b));
+          case 'name-asc': return a.name.localeCompare(b.name, 'ja');
+          default: return 0;
+        }
+      });
+    }
 
     // ── OGP 取得 ─────────────────────────────────────────────────
     // タイムアウト付きfetch
@@ -843,20 +963,6 @@
         ? `<img src="${esc(item.image)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'thumb-placeholder',textContent:'🛍️'}))">`
         : `<div class="thumb-placeholder">🛍️</div>`;
 
-      const menuItems = isPurchased
-        ? `<button class="dd-item" onclick="openEditModal('${item.id}')">編集</button>
-           <button class="dd-item" onclick="togglePurchased('${item.id}')">購入取り消し</button>
-           <button class="dd-item danger" onclick="deleteItem('${item.id}')">削除</button>`
-        : item.onHold
-        ? `<button class="dd-item" onclick="openEditModal('${item.id}')">編集</button>
-           <button class="dd-item" onclick="toggleHold('${item.id}')">保留解除</button>
-           <button class="dd-item" onclick="togglePurchased('${item.id}')">購入済みにする</button>
-           <button class="dd-item danger" onclick="deleteItem('${item.id}')">削除</button>`
-        : `<button class="dd-item" onclick="openEditModal('${item.id}')">編集</button>
-           <button class="dd-item" onclick="toggleHold('${item.id}')">保留にする</button>
-           <button class="dd-item" onclick="togglePurchased('${item.id}')">購入済みにする</button>
-           <button class="dd-item danger" onclick="deleteItem('${item.id}')">削除</button>`;
-
       const isInactive = isPurchased || item.onHold;
       const dragAttrs = (isInactive || isMobile) ? '' :
         `draggable="true" ondragstart="onDragStart(event,'${item.id}')" ondragover="onDragOver(event,'${item.id}')" ondrop="onDrop(event,'${item.id}')" ondragend="onDragEnd()"`;
@@ -864,6 +970,11 @@
       const stateBadge = isPurchased
         ? '<div class="purchased-badge">購入済み</div>'
         : item.onHold ? '<div class="hold-badge">保留中</div>' : '';
+
+      const holdBtn = !isPurchased ? `
+        <button class="btn-icon${item.onHold ? ' hold-active' : ''}" title="${item.onHold ? '保留解除' : '保留にする'}" onclick="event.stopPropagation();toggleHold('${item.id}')">
+          <svg viewBox="0 0 16 16" fill="${item.onHold ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M4 2h8a1 1 0 011 1v11l-5-3-5 3V3a1 1 0 011-1z"/></svg>
+        </button>` : '';
 
       return `
         <div class="card${isPurchased ? ' is-purchased' : item.onHold ? ' is-hold' : ''}" data-id="${item.id}" ${dragAttrs}>
@@ -876,10 +987,6 @@
             </div>
             ${stateBadge}
           </div>
-          <div class="card-menu-wrap" onclick="event.stopPropagation()">
-            <button class="btn-menu" onclick="toggleMenu('${item.id}')">⋯</button>
-            <div class="dropdown" id="dd-${item.id}">${menuItems}</div>
-          </div>
           <div class="card-body">
             <div class="card-name">${esc(item.name)}</div>
             <div class="card-meta">
@@ -890,13 +997,29 @@
             </div>
             <div class="price-wrap">
               <div class="price-display">${priceHtml}</div>
-              <div class="price-actions">
+              ${isPurchased ? '' : `<div class="price-actions">
                 <button class="btn-record" onclick="openPriceModal('${item.id}')">＋ 価格を記録</button>
                 ${prices.length > 0 ? `<button class="btn-hist" onclick="toggleHistory('${item.id}')">履歴</button>` : ''}
-              </div>
+              </div>`}
               ${prices.length > 0 ? `<div class="history-wrap" id="hist-${item.id}"><div class="history-inner">${histRows}</div></div>` : ''}
             </div>
-            ${item.memo ? `<div class="card-memo" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">${esc(item.memo)}</div>` : ''}
+            <div class="card-memo" contenteditable="true" data-placeholder="メモを追加..." onclick="event.stopPropagation()" onblur="saveMemo('${item.id}',this)" onkeydown="if(event.key==='Escape')this.blur()">${esc(item.memo)}</div>
+            <div class="card-actions" onclick="event.stopPropagation()">
+              <label class="purchase-check">
+                <input type="checkbox" ${isPurchased ? 'checked' : ''} onchange="togglePurchased('${item.id}')">
+                <span class="check-box"></span>
+                <span class="check-label">購入済み</span>
+              </label>
+              <div class="card-icon-btns">
+                ${holdBtn}
+                <button class="btn-icon" title="編集" onclick="event.stopPropagation();openEditModal('${item.id}')">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/><line x1="9" y1="4.5" x2="11.5" y2="7"/></svg>
+                </button>
+                <button class="btn-icon danger" title="削除" onclick="event.stopPropagation();deleteItem('${item.id}')">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="2,4 14,4"/><path d="M5 4V2h6v2"/><path d="M3 4l1 10h8l1-10"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>`;
     }
@@ -921,8 +1044,9 @@
         const filtered = query
           ? active.filter(i => i.name.toLowerCase().includes(query) || domain(i.url).toLowerCase().includes(query))
           : active;
-        grid.innerHTML = filtered.length
-          ? filtered.map(i => cardHtml(i, false)).join('')
+        const sorted = applySort(filtered);
+        grid.innerHTML = sorted.length
+          ? sorted.map(i => cardHtml(i, false)).join('')
           : `<div class="no-results">「${esc(query)}」に一致するアイテムがありませんでした</div>`;
       }
 
@@ -997,6 +1121,56 @@
         render();
         toast('削除しました');
       });
+    }
+
+    // ── エクスポート / インポート ────────────────────────────────
+    function exportData() {
+      const json = JSON.stringify(items, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `wishlist_${todayStr()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('エクスポートしました');
+    }
+
+    function importData(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!Array.isArray(parsed)) throw new Error();
+          // 既存データとマージ（idが重複しないよう既存を優先）
+          const existingIds = new Set(items.map(i => i.id));
+          const newItems = parsed.filter(i => i.id && !existingIds.has(i.id));
+          if (newItems.length === 0 && parsed.length > 0) {
+            toast('すでに同じデータが存在します');
+          } else {
+            items = [...items, ...newItems];
+            persist();
+            render();
+            toast(`${newItems.length}件をインポートしました`);
+          }
+        } catch {
+          toast('ファイルの読み込みに失敗しました');
+        }
+        input.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    function saveMemo(id, el) {
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+      const newMemo = el.innerText.trim();
+      if (item.memo !== newMemo) {
+        item.memo = newMemo;
+        persist();
+      }
     }
 
     function togglePurchased(id) {
