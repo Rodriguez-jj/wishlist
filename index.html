@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ほしいものリスト</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b27;
+      --surface-h:#1c2333;
+      --border:   #21293a;
+      --border-h: #2d3a50;
+      --accent:   #3b82f6;
+      --accent-h: #2563eb;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --radius:   12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .app { max-width: 1280px; margin: 0 auto; padding: 0 28px 120px; }
+
+    /* ── ヘッダー ── */
+    header {
+      padding: 40px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .logo h1 {
+      font-size: clamp(1.4rem, 3vw, 1.9rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .logo p { margin-top: 5px; font-size: 0.72rem; color: var(--muted); }
+    .header-badges {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .h-badge {
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 12px;
+      white-space: nowrap;
+    }
+    .h-badge strong { color: var(--accent); font-weight: 700; }
+    .h-badge.total strong { color: var(--green); }
+
+    /* ── 検索バー ── */
+    .search-wrap { padding: 18px 0 20px; position: relative; }
+    .search-wrap::before {
+      content: '🔍';
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px 14px 10px 36px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.88rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+
+    /* ── グリッド ── */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+
+    /* ── カード ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: visible;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s, opacity 0.15s;
+      cursor: grab;
+      user-select: none;
+    }
+    .card:hover { border-color: var(--border-h); box-shadow: 0 6px 20px rgba(0,0,0,0.3); transform: translateY(-2px); }
+    .card.dragging { opacity: 0.35; border-style: dashed; transform: none; box-shadow: none; }
+    .card.drag-over { border-color: var(--accent); border-style: dashed; }
+    .card.is-purchased { opacity: 0.65; }
+
+    /* ドラッグハンドル（モバイル専用） */
+    .drag-handle {
+      display: none;
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 5;
+      background: rgba(13,17,23,0.65);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      width: 30px;
+      height: 30px;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      line-height: 1;
+    }
+    @media (max-width: 600px) {
+      .drag-handle { display: flex; }
+    }
+
+    /* サムネ */
+    .card-thumb {
+      position: relative;
+      aspect-ratio: 16/10;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--surface-h);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .card-thumb img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.3s; display: block; pointer-events: none;
+    }
+    .card:hover .card-thumb img { transform: scale(1.04); }
+    .thumb-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; color: var(--muted);
+    }
+    .thumb-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.45);
+      opacity: 0; transition: opacity 0.2s;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .card-thumb:hover .thumb-overlay { opacity: 1; }
+    .thumb-overlay.active { opacity: 1; }
+    .thumb-link-icon {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 50%;
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 0.95rem;
+    }
+    .thumb-open-btn {
+      display: none;
+      background: white;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #111;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    @media (max-width: 600px) {
+      .thumb-link-icon { display: none; }
+      .thumb-open-btn { display: block; }
+    }
+    .purchased-badge {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: rgba(34,197,94,0.9);
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    /* カードメニュー */
+    .card-menu-wrap { position: absolute; top: 8px; right: 8px; z-index: 5; }
+    .btn-menu {
+      background: rgba(13,17,23,0.7);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      width: 30px; height: 30px;
+      cursor: pointer; color: #94a3b8; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-menu:hover { background: rgba(13,17,23,0.9); color: white; }
+    .dropdown {
+      position: absolute; top: calc(100% + 4px); right: 0;
+      background: var(--surface-h);
+      border: 1px solid var(--border-h);
+      border-radius: 8px; overflow: hidden;
+      min-width: 130px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      display: none; z-index: 10;
+    }
+    .dropdown.open { display: block; }
+    .dd-item {
+      display: block; width: 100%; padding: 10px 14px;
+      font-size: 0.8rem; color: var(--text);
+      background: none; border: none; text-align: left;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.1s;
+    }
+    .dd-item:hover { background: rgba(255,255,255,0.06); }
+    .dd-item.danger { color: var(--red); }
+
+    /* カード本体 */
+    .card-body { padding: 13px 15px 15px; cursor: default; display: flex; flex-direction: column; flex: 1; }
+    .card-name {
+      font-size: 0.9rem; font-weight: 700; line-height: 1.5;
+      margin-bottom: 4px;
+      display: -webkit-box; -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .card-memo {
+      font-size: 0.75rem; color: var(--muted);
+      line-height: 1.5; margin-bottom: 6px;
+      display: -webkit-box; -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .card-meta {
+      font-size: 0.67rem; color: var(--muted);
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 11px;
+    }
+    .meta-tag {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 4px; padding: 2px 7px;
+    }
+
+    /* 価格 */
+    .price-wrap { border-top: 1px solid var(--border); padding-top: 11px; margin-top: auto; }
+    .price-display { min-height: 58px; }
+    .price-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .price-val { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; }
+    .price-badge { font-size: 0.67rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; }
+    .badge-down { background: rgba(34,197,94,0.15); color: var(--green); }
+    .badge-up   { background: rgba(239,68,68,0.12); color: var(--red); }
+    .price-sub  { font-size: 0.67rem; color: var(--muted); margin-top: 2px; }
+    .no-price   { font-size: 0.78rem; color: var(--muted); }
+    .price-actions { display: flex; gap: 8px; margin-top: 9px; }
+    .btn-record {
+      flex: 1; padding: 7px 0;
+      background: var(--accent); border: none;
+      border-radius: 7px; color: white;
+      font-size: 0.73rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-record:hover { background: var(--accent-h); }
+    .btn-hist {
+      padding: 7px 11px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 7px; color: var(--muted);
+      font-size: 0.73rem; cursor: pointer; font-family: inherit;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-hist:hover { border-color: var(--border-h); color: var(--text); }
+
+    /* 価格履歴 */
+    .history-wrap { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+    .history-wrap.open { max-height: 240px; }
+    .history-inner { margin-top: 9px; border-top: 1px solid var(--border); padding-top: 8px; }
+    .hist-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 0; font-size: 0.7rem;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .hist-row:last-child { border-bottom: none; }
+    .hist-date { color: var(--muted); }
+    .hist-note {
+      font-size: 0.62rem; color: var(--muted);
+      background: var(--surface-h); border-radius: 3px;
+      padding: 1px 5px; margin-left: 4px;
+    }
+    .hist-price { font-weight: 600; }
+
+    /* ── 購入済みセクション ── */
+    .purchased-section { margin-top: 40px; }
+    .purchased-toggle {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; padding: 10px 0;
+      background: none; border: none; border-top: 1px solid var(--border);
+      color: var(--muted); font-size: 0.8rem; font-family: inherit;
+      cursor: pointer; text-align: left;
+      transition: color 0.15s;
+    }
+    .purchased-toggle:hover { color: var(--text); }
+    .purchased-toggle .arrow { font-size: 0.7rem; transition: transform 0.2s; }
+    .purchased-toggle.open .arrow { transform: rotate(180deg); }
+    .purchased-grid-wrap { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+    .purchased-grid-wrap.open { max-height: 4000px; }
+    .purchased-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding-top: 16px; }
+
+    /* ── 保留セクション ── */
+    .hold-section { margin-top: 16px; }
+    .hold-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding-top: 16px; }
+    .card.is-hold { opacity: 0.6; }
+    .hold-badge {
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(234,179,8,0.9); color: #1a1200;
+      font-size: 0.65rem; font-weight: 700;
+      padding: 3px 8px; border-radius: 4px;
+    }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed; bottom: 32px; right: 32px;
+      width: 50px; height: 50px;
+      background: var(--accent); border: none; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; color: white; z-index: 100;
+      transition: background 0.15s, transform 0.15s;
+      box-shadow: 0 4px 14px rgba(59,130,246,0.4); line-height: 1;
+    }
+    .fab:hover { background: var(--accent-h); transform: scale(1.07); }
+    .fab:active { transform: scale(0.96); }
+
+    /* ── モーダル共通 ── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+      z-index: 200; display: flex; align-items: center; justify-content: center;
+      padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.18s;
+    }
+    .overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border-h);
+      border-radius: 14px; padding: 24px 22px;
+      width: 100%; max-width: 480px;
+      transform: translateY(14px);
+      transition: transform 0.2s cubic-bezier(.22,1,.36,1);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .overlay.open .modal { transform: translateY(0); }
+    .modal-title { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 18px; }
+
+    /* フォーム */
+    .form-group { margin-bottom: 13px; }
+    .form-label {
+      display: block; font-size: 0.7rem; font-weight: 600;
+      color: var(--muted); margin-bottom: 5px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .form-input, .form-textarea {
+      width: 100%; padding: 10px 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text);
+      font-size: 0.87rem; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    .form-input:focus, .form-textarea:focus { border-color: var(--accent); }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--muted); }
+    .form-textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
+    .url-row { display: flex; gap: 8px; }
+    .url-row .form-input { flex: 1; }
+    .btn-fetch {
+      padding: 0 13px;
+      background: var(--surface-h); border: 1px solid var(--border-h);
+      border-radius: 8px; color: var(--text);
+      font-size: 0.76rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      white-space: nowrap; transition: background 0.15s, border-color 0.15s; flex-shrink: 0;
+    }
+    .btn-fetch:hover { border-color: var(--accent); }
+    .btn-fetch:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* プレビュー */
+    .preview {
+      display: none; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 11px; gap: 11px;
+      align-items: center; margin-bottom: 13px;
+    }
+    .preview.show { display: flex; }
+    .preview img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: var(--surface-h); }
+    .preview-info { flex: 1; min-width: 0; }
+    .preview-name { font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .preview-domain { font-size: 0.67rem; color: var(--muted); margin-top: 2px; }
+
+    /* モーダルボタン */
+    .modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+    .btn-cancel {
+      flex: 1; padding: 10px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 8px; color: var(--muted);
+      font-size: 0.84rem; cursor: pointer; font-family: inherit;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-cancel:hover { border-color: var(--border-h); color: var(--text); }
+    .btn-save {
+      flex: 2; padding: 10px;
+      background: var(--accent); border: none;
+      border-radius: 8px; color: white;
+      font-size: 0.84rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-save:hover { background: var(--accent-h); }
+
+    /* 空・検索なし */
+    .empty, .no-results {
+      grid-column: 1 / -1; text-align: center;
+      padding: 72px 20px; color: var(--muted);
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 14px; opacity: 0.45; }
+    .empty h2 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+    .empty p, .no-results { font-size: 0.8rem; }
+
+    /* トースト */
+    .toast {
+      position: fixed; bottom: 90px; left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--surface-h); border: 1px solid var(--border-h);
+      border-radius: 8px; padding: 9px 17px;
+      font-size: 0.8rem; z-index: 400;
+      opacity: 0; pointer-events: none;
+      transition: all 0.2s cubic-bezier(.22,1,.36,1); white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* スピナー */
+    .spinner {
+      display: inline-block; width: 12px; height: 12px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.55s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-h); border-radius: 3px; }
+
+    @media (max-width: 600px) {
+      .app { padding: 0 12px 100px; }
+      header { padding: 20px 0 0; flex-wrap: wrap; }
+      .fab { bottom: 22px; right: 16px; width: 46px; height: 46px; font-size: 1.4rem; }
+      .grid, .purchased-grid, .hold-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .card-body { padding: 10px 11px 12px; }
+      .card-name { font-size: 0.78rem; }
+      .card-memo { font-size: 0.68rem; }
+      .card-meta { font-size: 0.6rem; gap: 4px; margin-bottom: 8px; }
+      .price-val { font-size: 1rem; }
+      .price-sub, .no-price { font-size: 0.62rem; }
+      .price-badge { font-size: 0.6rem; padding: 1px 5px; }
+      .btn-record { font-size: 0.67rem; padding: 6px 0; }
+      .btn-hist { font-size: 0.67rem; padding: 6px 8px; }
+      .hist-row { font-size: 0.65rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo">
+        <h1>ほしいものリスト</h1>
+        <p>あなたの欲しいものを、すべてここに。</p>
+      </div>
+      <div class="header-badges">
+        <div class="h-badge"><strong id="stat-count">0</strong> アイテム</div>
+        <div class="h-badge total">合計 <strong id="stat-total">¥0</strong></div>
+      </div>
+    </header>
+
+    <div class="search-wrap">
+      <input class="search-input" id="search" type="search" placeholder="商品名・サイト名で検索...">
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <!-- 購入済みセクション -->
+    <!-- 保留セクション -->
+    <div class="purchased-section hold-section" id="hold-section" style="display:none">
+      <button class="purchased-toggle" id="hold-toggle" onclick="toggleHoldSection()">
+        <span>保留中</span>
+        <span id="hold-count-label">0件</span>
+        <span style="flex:1"></span>
+        <span class="arrow">▼</span>
+      </button>
+      <div class="purchased-grid-wrap" id="hold-grid-wrap">
+        <div class="hold-grid" id="hold-grid"></div>
+      </div>
+    </div>
+
+    <!-- 購入済みセクション -->
+    <div class="purchased-section" id="purchased-section" style="display:none">
+      <button class="purchased-toggle" id="purchased-toggle" onclick="togglePurchasedSection()">
+        <span>購入済み</span>
+        <span id="purchased-count-label">0件</span>
+        <span style="flex:1"></span>
+        <span class="arrow">▼</span>
+      </button>
+      <div class="purchased-grid-wrap" id="purchased-grid-wrap">
+        <div class="purchased-grid" id="purchased-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" id="fab" title="追加">＋</button>
+
+  <!-- 追加モーダル -->
+  <div class="overlay" id="add-overlay">
+    <div class="modal">
+      <div class="modal-title">アイテムを追加</div>
+      <div class="form-group">
+        <label class="form-label">URL</label>
+        <div class="url-row">
+          <input class="form-input" id="in-url" type="url" placeholder="https://...">
+          <button class="btn-fetch" id="btn-fetch">情報を取得</button>
+        </div>
+      </div>
+      <div class="preview" id="preview">
+        <img id="prev-img" src="" alt="">
+        <div class="preview-info">
+          <div class="preview-name" id="prev-name"></div>
+          <div class="preview-domain" id="prev-domain"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">商品名</label>
+        <input class="form-input" id="in-name" type="text" placeholder="商品名を入力（任意）">
+      </div>
+      <div class="form-group">
+        <label class="form-label">画像URL（任意）</label>
+        <input class="form-input" id="in-img" type="url" placeholder="自動取得できない場合に入力">
+      </div>
+      <div class="form-group">
+        <label class="form-label">メモ（任意）</label>
+        <textarea class="form-textarea" id="in-memo" placeholder="気になる点、候補のメモなど..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">価格（任意）</label>
+        <input class="form-input" id="in-price" type="number" placeholder="例：3980" min="0" step="1">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="add-cancel">キャンセル</button>
+        <button class="btn-save" id="add-save">追加する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 編集モーダル -->
+  <div class="overlay" id="edit-overlay">
+    <div class="modal">
+      <div class="modal-title">アイテムを編集</div>
+      <div class="form-group">
+        <label class="form-label">商品名</label>
+        <input class="form-input" id="edit-name" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL</label>
+        <input class="form-input" id="edit-url" type="url">
+      </div>
+      <div class="form-group">
+        <label class="form-label">画像URL</label>
+        <input class="form-input" id="edit-img" type="url">
+      </div>
+      <div class="form-group">
+        <label class="form-label">メモ</label>
+        <textarea class="form-textarea" id="edit-memo" placeholder="気になる点、候補のメモなど..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="edit-cancel">キャンセル</button>
+        <button class="btn-save" id="edit-save">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 価格記録モーダル -->
+  <div class="overlay" id="price-overlay">
+    <div class="modal">
+      <div class="modal-title">価格を記録</div>
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:14px;line-height:1.6" id="price-target-name"></div>
+      <div class="form-group">
+        <label class="form-label">価格（円）</label>
+        <input class="form-input" id="in-price-new" type="number" placeholder="例：3980" min="0" step="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">メモ（任意）</label>
+        <input class="form-input" id="in-price-note" type="text" placeholder="例：Amazonセール">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="price-cancel">キャンセル</button>
+        <button class="btn-save" id="price-save">記録する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 削除確認モーダル -->
+  <div class="overlay" id="confirm-overlay">
+    <div class="modal" style="max-width:360px">
+      <div class="modal-title">削除の確認</div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:20px;line-height:1.6" id="confirm-msg"></p>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="confirm-cancel">キャンセル</button>
+        <button class="btn-save" id="confirm-ok" style="background:var(--red)">削除する</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ── Storage ──────────────────────────────────────────────────
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const KEY = 'wishlist_v1';
+    let items = (() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } })();
+    const persist = () => localStorage.setItem(KEY, JSON.stringify(items));
+
+    // ── Utils ────────────────────────────────────────────────────
+    const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    const fmtDate = s => { const d = new Date(s); return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`; };
+    const fmtPrice = n => '¥' + Number(n).toLocaleString('ja-JP');
+    const todayStr = () => new Date().toISOString().slice(0, 10);
+    const domain = url => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
+
+    let toastTimer;
+    const toast = msg => {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+    };
+
+    // ── 検索 ────────────────────────────────────────────────────
+    let query = '';
+    document.getElementById('search').addEventListener('input', e => {
+      query = e.target.value.trim().toLowerCase();
+      render();
+    });
+
+    // ── OGP 取得 ─────────────────────────────────────────────────
+    // タイムアウト付きfetch
+    async function fetchJSON(url, ms = 4000) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), ms);
+      try {
+        const res = await fetch(url, { signal: ctrl.signal });
+        return await res.json();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    // HTMLをパースしてOGP情報を抽出
+    function parseOGP(html) {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const meta = sel => doc.querySelector(sel)?.getAttribute('content') || '';
+      return {
+        title: meta('meta[property="og:title"]') || meta('meta[name="twitter:title"]') || doc.title || '',
+        image: meta('meta[property="og:image"]') || meta('meta[property="og:image:url"]') || meta('meta[name="twitter:image"]') || '',
+      };
+    }
+
+    async function fetchOGP(url) {
+      let title = '', image = '';
+
+      // まずalloriginsで試みる（4秒タイムアウト）
+      try {
+        const data = await fetchJSON(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        if (data?.contents) ({ title, image } = parseOGP(data.contents));
+      } catch {}
+
+      // title・imageが揃っていればmicrolinkは呼ばない
+      if (title && image) return { title, image };
+
+      // 足りない場合だけmicrolinkで補完（4秒タイムアウト）
+      try {
+        const ml = await fetchJSON(`https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true`);
+        if (ml?.status === 'success') {
+          if (!title) title = ml.data.title || '';
+          if (!image) image = ml.data.image?.url || ml.data.screenshot?.url || ml.data.logo?.url || '';
+        }
+      } catch {}
+
+      return { title, image };
+    }
+
+    // ── Drag & Drop ──────────────────────────────────────────────
+    let dragSrcId = null;
+
+    function onDragStart(e, id) {
+      if (query) { e.preventDefault(); return; }
+      dragSrcId = id;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => document.querySelector(`[data-id="${id}"]`)?.classList.add('dragging'), 0);
+    }
+
+    function onDragOver(e, id) {
+      if (!dragSrcId || id === dragSrcId) return;
+      e.preventDefault();
+      document.querySelectorAll('.card.drag-over').forEach(c => c.classList.remove('drag-over'));
+      document.querySelector(`[data-id="${id}"]`)?.classList.add('drag-over');
+    }
+
+    function onDrop(e, id) {
+      e.preventDefault();
+      if (!dragSrcId || dragSrcId === id) return;
+      const srcIdx = items.findIndex(i => i.id === dragSrcId);
+      const dstIdx = items.findIndex(i => i.id === id);
+      const [removed] = items.splice(srcIdx, 1);
+      items.splice(dstIdx, 0, removed);
+      persist();
+      render();
+    }
+
+    function onDragEnd() {
+      document.querySelectorAll('.card.dragging, .card.drag-over').forEach(c => c.classList.remove('dragging', 'drag-over'));
+      dragSrcId = null;
+    }
+
+    // ── タッチドラッグ（モバイル） ────────────────────────────────
+    let touchDragId = null;
+    let touchGhost = null;
+    let touchOffsetX = 0, touchOffsetY = 0;
+
+    function onTouchDragStart(e, id) {
+      if (query) return;
+      e.preventDefault();
+      touchDragId = id;
+      const card = document.querySelector(`[data-id="${id}"]`);
+      const rect = card.getBoundingClientRect();
+      const touch = e.touches[0];
+      touchOffsetX = touch.clientX - rect.left;
+      touchOffsetY = touch.clientY - rect.top;
+
+      touchGhost = card.cloneNode(true);
+      touchGhost.style.cssText = `
+        position:fixed; width:${rect.width}px; left:${rect.left}px; top:${rect.top}px;
+        opacity:0.85; pointer-events:none; z-index:9999;
+        transform:scale(1.03); box-shadow:0 20px 50px rgba(0,0,0,0.5);
+        border-radius:12px; transition:none;
+      `;
+      document.body.appendChild(touchGhost);
+      card.classList.add('dragging');
+    }
+
+    document.addEventListener('touchmove', e => {
+      if (!touchDragId) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      touchGhost.style.left = `${touch.clientX - touchOffsetX}px`;
+      touchGhost.style.top  = `${touch.clientY - touchOffsetY}px`;
+
+      touchGhost.style.visibility = 'hidden';
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      touchGhost.style.visibility = '';
+      const targetCard = el?.closest('.card[data-id]');
+      const targetId = targetCard?.dataset.id;
+      document.querySelectorAll('.card.drag-over').forEach(c => c.classList.remove('drag-over'));
+      if (targetId && targetId !== touchDragId) targetCard.classList.add('drag-over');
+    }, { passive: false });
+
+    document.addEventListener('touchend', e => {
+      if (!touchDragId) return;
+      const touch = e.changedTouches[0];
+      touchGhost.style.visibility = 'hidden';
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetCard = el?.closest('.card[data-id]');
+      const targetId = targetCard?.dataset.id;
+
+      if (targetId && targetId !== touchDragId) {
+        const srcIdx = items.findIndex(i => i.id === touchDragId);
+        const dstIdx = items.findIndex(i => i.id === targetId);
+        const [removed] = items.splice(srcIdx, 1);
+        items.splice(dstIdx, 0, removed);
+        persist();
+      }
+
+      touchGhost.remove();
+      touchGhost = null;
+      document.querySelectorAll('.card.dragging, .card.drag-over').forEach(c => c.classList.remove('dragging', 'drag-over'));
+      touchDragId = null;
+      render();
+    });
+
+    // ── Render ───────────────────────────────────────────────────
+    function cardHtml(item, isPurchased = false) {
+      const prices = item.prices || [];
+      const latest = prices.at(-1);
+      const minP = prices.length ? Math.min(...prices.map(p => p.price)) : null;
+
+      let priceHtml;
+      if (latest) {
+        const prev = prices.length >= 2 ? prices.at(-2).price : null;
+        let badge = '';
+        if (prev !== null) {
+          const diff = latest.price - prev;
+          if (diff < 0) badge = `<span class="price-badge badge-down">↓ ${fmtPrice(Math.abs(diff))}</span>`;
+          else if (diff > 0) badge = `<span class="price-badge badge-up">↑ ${fmtPrice(diff)}</span>`;
+        }
+        const minNote = minP !== null && minP < latest.price ? `<div class="price-sub">最安値 ${fmtPrice(minP)}</div>` : '';
+        priceHtml = `<div class="price-row"><span class="price-val">${fmtPrice(latest.price)}</span>${badge}</div>
+          <div class="price-sub">${fmtDate(latest.date)} 更新</div>${minNote}`;
+      } else {
+        priceHtml = `<div class="no-price">価格未登録</div>`;
+      }
+
+      const histRows = prices.slice().reverse().map(p => `
+        <div class="hist-row">
+          <span class="hist-date">${fmtDate(p.date)}${p.note ? `<span class="hist-note">${esc(p.note)}</span>` : ''}</span>
+          <span class="hist-price">${fmtPrice(p.price)}</span>
+        </div>`).join('');
+
+      const thumbInner = item.image
+        ? `<img src="${esc(item.image)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'thumb-placeholder',textContent:'🛍️'}))">`
+        : `<div class="thumb-placeholder">🛍️</div>`;
+
+      const menuItems = isPurchased
+        ? `<button class="dd-item" onclick="openEditModal('${item.id}')">編集</button>
+           <button class="dd-item" onclick="togglePurchased('${item.id}')">購入取り消し</button>
+           <button class="dd-item danger" onclick="deleteItem('${item.id}')">削除</button>`
+        : item.onHold
+        ? `<button class="dd-item" onclick="openEditModal('${item.id}')">編集</button>
+           <button class="dd-item" onclick="toggleHold('${item.id}')">保留解除</button>
+           <button class="dd-item" onclick="togglePurchased('${item.id}')">購入済みにする</button>
+           <button class="dd-item danger" onclick="deleteItem('${item.id}')">削除</button>`
+        : `<button class="dd-item" onclick="openEditModal('${item.id}')">編集</button>
+           <button class="dd-item" onclick="toggleHold('${item.id}')">保留にする</button>
+           <button class="dd-item" onclick="togglePurchased('${item.id}')">購入済みにする</button>
+           <button class="dd-item danger" onclick="deleteItem('${item.id}')">削除</button>`;
+
+      const isInactive = isPurchased || item.onHold;
+      const dragAttrs = (isInactive || isMobile) ? '' :
+        `draggable="true" ondragstart="onDragStart(event,'${item.id}')" ondragover="onDragOver(event,'${item.id}')" ondrop="onDrop(event,'${item.id}')" ondragend="onDragEnd()"`;
+
+      const stateBadge = isPurchased
+        ? '<div class="purchased-badge">購入済み</div>'
+        : item.onHold ? '<div class="hold-badge">保留中</div>' : '';
+
+      return `
+        <div class="card${isPurchased ? ' is-purchased' : item.onHold ? ' is-hold' : ''}" data-id="${item.id}" ${dragAttrs}>
+          <div class="card-thumb" onclick="handleThumbClick(event,'${esc(item.url)}')">
+            ${thumbInner}
+            ${isInactive ? '' : `<div class="drag-handle" ontouchstart="onTouchDragStart(event,'${item.id}')">⠿</div>`}
+            <div class="thumb-overlay" id="overlay-${item.id}">
+              <div class="thumb-link-icon">↗</div>
+              <button class="thumb-open-btn" onclick="event.stopPropagation();openLink('${esc(item.url)}')">開く ↗</button>
+            </div>
+            ${stateBadge}
+          </div>
+          <div class="card-menu-wrap" onclick="event.stopPropagation()">
+            <button class="btn-menu" onclick="toggleMenu('${item.id}')">⋯</button>
+            <div class="dropdown" id="dd-${item.id}">${menuItems}</div>
+          </div>
+          <div class="card-body">
+            <div class="card-name">${esc(item.name)}</div>
+            <div class="card-meta">
+              <span class="meta-tag">追加 ${fmtDate(item.addedAt)}</span>
+              ${isPurchased && item.purchasedAt ? `<span class="meta-tag">購入 ${fmtDate(item.purchasedAt)}</span>` : ''}
+              ${item.onHold && item.onHoldAt ? `<span class="meta-tag">保留 ${fmtDate(item.onHoldAt)}</span>` : ''}
+              <span class="meta-tag">${esc(domain(item.url))}</span>
+            </div>
+            <div class="price-wrap">
+              <div class="price-display">${priceHtml}</div>
+              <div class="price-actions">
+                <button class="btn-record" onclick="openPriceModal('${item.id}')">＋ 価格を記録</button>
+                ${prices.length > 0 ? `<button class="btn-hist" onclick="toggleHistory('${item.id}')">履歴</button>` : ''}
+              </div>
+              ${prices.length > 0 ? `<div class="history-wrap" id="hist-${item.id}"><div class="history-inner">${histRows}</div></div>` : ''}
+            </div>
+            ${item.memo ? `<div class="card-memo" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">${esc(item.memo)}</div>` : ''}
+          </div>
+        </div>`;
+    }
+
+    function render() {
+      const active    = items.filter(i => !i.purchased && !i.onHold);
+      const onHold    = items.filter(i => i.onHold && !i.purchased);
+      const purchased = items.filter(i => i.purchased);
+
+      // 合計額（アクティブかつ価格登録済みのみ）
+      const total = active
+        .filter(i => i.prices?.length)
+        .reduce((s, i) => s + i.prices.at(-1).price, 0);
+      document.getElementById('stat-count').textContent = active.length;
+      document.getElementById('stat-total').textContent = fmtPrice(total);
+
+      // メイングリッド
+      const grid = document.getElementById('grid');
+      if (!active.length && !query) {
+        grid.innerHTML = `<div class="empty"><div class="empty-icon">🛍️</div><h2>まだアイテムがありません</h2><p>右下の ＋ ボタンから追加してみよう！</p></div>`;
+      } else {
+        const filtered = query
+          ? active.filter(i => i.name.toLowerCase().includes(query) || domain(i.url).toLowerCase().includes(query))
+          : active;
+        grid.innerHTML = filtered.length
+          ? filtered.map(i => cardHtml(i, false)).join('')
+          : `<div class="no-results">「${esc(query)}」に一致するアイテムがありませんでした</div>`;
+      }
+
+      // 保留セクション
+      document.getElementById('hold-section').style.display = onHold.length ? '' : 'none';
+      document.getElementById('hold-count-label').textContent = `${onHold.length}件`;
+      document.getElementById('hold-grid').innerHTML = onHold.map(i => cardHtml(i, false)).join('');
+
+      // 購入済みセクション
+      document.getElementById('purchased-section').style.display = purchased.length ? '' : 'none';
+      document.getElementById('purchased-count-label').textContent = `${purchased.length}件`;
+      document.getElementById('purchased-grid').innerHTML = purchased.map(i => cardHtml(i, true)).join('');
+    }
+
+    // ── Actions ──────────────────────────────────────────────────
+    function openLink(url) { if (url) window.open(url, '_blank', 'noopener'); }
+
+    function handleThumbClick(e, url) {
+      if (!isMobile) { openLink(url); return; }
+      const overlay = e.currentTarget.querySelector('.thumb-overlay');
+      if (overlay.classList.contains('active')) return; // 「開く」ボタンに任せる
+      document.querySelectorAll('.thumb-overlay.active').forEach(o => o.classList.remove('active'));
+      overlay.classList.add('active');
+    }
+
+    function toggleHistory(id) { document.getElementById(`hist-${id}`)?.classList.toggle('open'); }
+
+    function toggleMenu(id) {
+      const dd = document.getElementById(`dd-${id}`);
+      const wasOpen = dd.classList.contains('open');
+      document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+      if (!wasOpen) dd.classList.add('open');
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.card-menu-wrap'))
+        document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+      if (!e.target.closest('.card-thumb'))
+        document.querySelectorAll('.thumb-overlay.active').forEach(o => o.classList.remove('active'));
+    });
+
+    // ── 削除確認モーダル ─────────────────────────────────────────
+    let confirmCallback = null;
+
+    function showConfirm(msg, onOk) {
+      document.getElementById('confirm-msg').textContent = msg;
+      document.getElementById('confirm-overlay').classList.add('open');
+      confirmCallback = onOk;
+    }
+
+    document.getElementById('confirm-cancel').addEventListener('click', () => {
+      document.getElementById('confirm-overlay').classList.remove('open');
+      confirmCallback = null;
+    });
+    document.getElementById('confirm-ok').addEventListener('click', () => {
+      document.getElementById('confirm-overlay').classList.remove('open');
+      if (confirmCallback) confirmCallback();
+      confirmCallback = null;
+    });
+    document.getElementById('confirm-overlay').addEventListener('click', e => {
+      if (e.target === e.currentTarget) {
+        document.getElementById('confirm-overlay').classList.remove('open');
+        confirmCallback = null;
+      }
+    });
+
+    function deleteItem(id) {
+      const item = items.find(i => i.id === id);
+      showConfirm(`「${item?.name || 'このアイテム'}」を削除しますか？`, () => {
+        items = items.filter(i => i.id !== id);
+        persist();
+        render();
+        toast('削除しました');
+      });
+    }
+
+    function togglePurchased(id) {
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+      item.purchased   = !item.purchased;
+      item.purchasedAt = item.purchased ? todayStr() : null;
+      if (item.purchased) { item.onHold = false; item.onHoldAt = null; }
+      persist();
+      render();
+      toast(item.purchased ? '購入済みにしました' : '購入取り消しました');
+    }
+
+    function toggleHold(id) {
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+      item.onHold   = !item.onHold;
+      item.onHoldAt = item.onHold ? todayStr() : null;
+      persist();
+      render();
+      toast(item.onHold ? '保留にしました' : '保留解除しました');
+    }
+
+    // ── セクション開閉 ───────────────────────────────────────────
+    function togglePurchasedSection() {
+      document.getElementById('purchased-toggle').classList.toggle('open');
+      document.getElementById('purchased-grid-wrap').classList.toggle('open');
+    }
+
+    function toggleHoldSection() {
+      document.getElementById('hold-toggle').classList.toggle('open');
+      document.getElementById('hold-grid-wrap').classList.toggle('open');
+    }
+
+    // ── 追加モーダル ─────────────────────────────────────────────
+    let ogpCache = null;
+
+    function openAddModal() {
+      ogpCache = null;
+      ['in-url','in-name','in-img','in-price'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('in-memo').value = '';
+      document.getElementById('preview').classList.remove('show');
+      document.getElementById('add-overlay').classList.add('open');
+      setTimeout(() => document.getElementById('in-url').focus(), 50);
+    }
+    function closeAddModal() { document.getElementById('add-overlay').classList.remove('open'); }
+
+    document.getElementById('fab').addEventListener('click', openAddModal);
+    document.getElementById('add-cancel').addEventListener('click', closeAddModal);
+    document.getElementById('add-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeAddModal(); });
+
+    document.getElementById('btn-fetch').addEventListener('click', async () => {
+      const url = document.getElementById('in-url').value.trim();
+      if (!url) { toast('URLを入力してください'); return; }
+      const btn = document.getElementById('btn-fetch');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>';
+      try {
+        const data = await fetchOGP(url);
+        ogpCache = data;
+        const prevImg = document.getElementById('prev-img');
+        prevImg.src = data.image || '';
+        prevImg.style.display = data.image ? '' : 'none';
+        document.getElementById('prev-name').textContent = data.title || '(タイトル取得できず)';
+        document.getElementById('prev-domain').textContent = domain(url);
+        document.getElementById('preview').classList.add('show');
+        if (data.title && !document.getElementById('in-name').value)
+          document.getElementById('in-name').value = data.title;
+        if (data.image && !document.getElementById('in-img').value)
+          document.getElementById('in-img').value = data.image;
+        toast('情報を取得しました');
+      } catch {
+        toast('取得に失敗しました。手動で入力してください。');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '情報を取得';
+      }
+    });
+
+    document.getElementById('add-save').addEventListener('click', () => {
+      const url = document.getElementById('in-url').value.trim();
+      if (!url) { toast('URLは必須です'); return; }
+      const pv = document.getElementById('in-price').value;
+      const item = {
+        id:      crypto.randomUUID(),
+        name:    document.getElementById('in-name').value.trim() || ogpCache?.title || domain(url) || '名称未設定',
+        url,
+        image:   document.getElementById('in-img').value.trim() || ogpCache?.image || '',
+        memo:    document.getElementById('in-memo').value.trim(),
+        addedAt: todayStr(),
+        prices:  [],
+        purchased:   false,
+        purchasedAt: null,
+        onHold:      false,
+        onHoldAt:    null,
+      };
+      if (pv && !isNaN(pv) && Number(pv) >= 0)
+        item.prices.push({ price: Number(pv), note: '', date: todayStr() });
+      items.push(item);
+      persist();
+      render();
+      closeAddModal();
+      toast('追加しました');
+    });
+
+    // ── 編集モーダル ─────────────────────────────────────────────
+    let editTarget = null;
+
+    function openEditModal(id) {
+      editTarget = id;
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+      document.getElementById('edit-name').value = item.name  || '';
+      document.getElementById('edit-url').value  = item.url   || '';
+      document.getElementById('edit-img').value  = item.image || '';
+      document.getElementById('edit-memo').value = item.memo  || '';
+      document.getElementById('edit-overlay').classList.add('open');
+      setTimeout(() => document.getElementById('edit-name').focus(), 50);
+    }
+    function closeEditModal() { document.getElementById('edit-overlay').classList.remove('open'); }
+
+    document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
+    document.getElementById('edit-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeEditModal(); });
+
+    document.getElementById('edit-save').addEventListener('click', () => {
+      const item = items.find(i => i.id === editTarget);
+      if (!item) return;
+      const url = document.getElementById('edit-url').value.trim();
+      if (!url) { toast('URLは必須です'); return; }
+      item.name  = document.getElementById('edit-name').value.trim() || domain(url) || '名称未設定';
+      item.url   = url;
+      item.image = document.getElementById('edit-img').value.trim();
+      item.memo  = document.getElementById('edit-memo').value.trim();
+      persist();
+      render();
+      closeEditModal();
+      toast('保存しました');
+    });
+
+    // ── 価格記録モーダル ─────────────────────────────────────────
+    let priceTarget = null;
+
+    function openPriceModal(id) {
+      priceTarget = id;
+      const item = items.find(i => i.id === id);
+      document.getElementById('price-target-name').textContent = item?.name || '';
+      document.getElementById('in-price-new').value  = '';
+      document.getElementById('in-price-note').value = '';
+      document.getElementById('price-overlay').classList.add('open');
+      setTimeout(() => document.getElementById('in-price-new').focus(), 50);
+    }
+    function closePriceModal() { document.getElementById('price-overlay').classList.remove('open'); }
+
+    document.getElementById('price-cancel').addEventListener('click', closePriceModal);
+    document.getElementById('price-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closePriceModal(); });
+
+    document.getElementById('price-save').addEventListener('click', () => {
+      const pv   = document.getElementById('in-price-new').value;
+      const note = document.getElementById('in-price-note').value.trim();
+      if (!pv || isNaN(pv) || Number(pv) < 0) { toast('価格を入力してください'); return; }
+      const item = items.find(i => i.id === priceTarget);
+      if (!item) return;
+      item.prices.push({ price: Number(pv), note, date: todayStr() });
+      persist();
+      render();
+      closePriceModal();
+      toast('価格を記録しました');
+    });
+
+    // ── Init ─────────────────────────────────────────────────────
+    render();
+  </script>
+</body>
+</html>
