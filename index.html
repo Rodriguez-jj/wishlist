@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ほしいもの">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="theme-color" content="#0d1117">
   <title>ほしいものリスト</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -1160,6 +1164,80 @@
       closePriceModal();
       toast('価格を記録しました');
     });
+
+    // ── アイコン生成 ──────────────────────────────────────────────
+    function generateIcon(size) {
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const ctx = c.getContext('2d');
+      const s = size / 100;
+
+      // 背景
+      const bg = ctx.createLinearGradient(0, 0, size, size);
+      bg.addColorStop(0, '#131c2e');
+      bg.addColorStop(1, '#0d1117');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, size, size);
+
+      // バッグ本体
+      ctx.beginPath();
+      const bx=20*s, by=40*s, bw=60*s, bh=44*s, br=9*s;
+      ctx.moveTo(bx+br, by);
+      ctx.lineTo(bx+bw-br, by);
+      ctx.arcTo(bx+bw, by, bx+bw, by+br, br);
+      ctx.lineTo(bx+bw, by+bh-br);
+      ctx.arcTo(bx+bw, by+bh, bx+bw-br, by+bh, br);
+      ctx.lineTo(bx+br, by+bh);
+      ctx.arcTo(bx, by+bh, bx, by+bh-br, br);
+      ctx.lineTo(bx, by+br);
+      ctx.arcTo(bx, by, bx+br, by, br);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(59,130,246,0.12)';
+      ctx.fill();
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 4.5*s;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // ハンドル
+      ctx.beginPath();
+      ctx.moveTo(35*s, 40*s);
+      ctx.bezierCurveTo(35*s, 18*s, 65*s, 18*s, 65*s, 40*s);
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 4.5*s;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // 星
+      const cx=50*s, cy=65*s, spikes=5, ro=12*s, ri=5*s;
+      ctx.beginPath();
+      for (let i=0; i<spikes*2; i++) {
+        const r = i%2===0 ? ro : ri;
+        const a = (i * Math.PI / spikes) - Math.PI/2;
+        i===0 ? ctx.moveTo(cx+r*Math.cos(a), cy+r*Math.sin(a))
+               : ctx.lineTo(cx+r*Math.cos(a), cy+r*Math.sin(a));
+      }
+      ctx.closePath();
+      ctx.fillStyle = '#93c5fd';
+      ctx.fill();
+
+      return c.toDataURL('image/png');
+    }
+
+    function applyIcon() {
+      const url180 = generateIcon(180);
+      const url32  = generateIcon(32);
+      const touch = document.createElement('link');
+      touch.rel = 'apple-touch-icon';
+      touch.href = url180;
+      document.head.appendChild(touch);
+      const fav = document.createElement('link');
+      fav.rel = 'icon';
+      fav.type = 'image/png';
+      fav.href = url32;
+      document.head.appendChild(fav);
+    }
+    applyIcon();
 
     // ── Init ─────────────────────────────────────────────────────
     render();
