@@ -35,18 +35,26 @@
     --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  /* ダークモード時の視認性を向上 */
   @media (prefers-color-scheme: dark){
     :root{
-      --paper: #1c1a16;
-      --paper-deep: #14120d;
-      --card: #232019;
-      --line: #3a352a;
-      --line-soft: #2c2820;
-      --ink: #ece7d8;
-      --ink-soft: #b3ac97;
-      --ink-faint: #7d7663;
-      --white: #262319;
+      --paper: #161512;
+      --paper-deep: #0f0e0b;
+      --card: #201e1a;
+      --line: #3f3a2f;
+      --line-soft: #2e2a22;
+      --ink: #f0ebd8;
+      --ink-soft: #c4bca6;
+      --ink-faint: #8f8875;
+      --white: #2a271f;
+      
+      --navy: #7697d6;
+      --navy-deep: #172130;
+      --rust: #d97a66;
+      --moss: #82a87a;
+      --gold: #d4a742;
     }
+    .cat-toggle{ color: var(--navy); }
   }
 
   *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -205,7 +213,6 @@
     font-weight:600;
     padding: 10px 0 4px;
   }
-  @media (prefers-color-scheme: dark){ .cat-toggle{ color:#9fb4d8; } }
   .cat-full{ margin-top:6px; border-top: 1px dashed var(--line); padding-top:10px; }
   .cat-row{
     display:flex; align-items:center; gap:10px;
@@ -617,13 +624,10 @@
   /* ================= Utilities ================= */
   function pad2(n){ return String(n).padStart(2,"0"); }
 
-  // A "month" here is a billing cycle running from cycleStartDay of one
-  // calendar month through (cycleStartDay - 1) of the next. cycleStartDay=1
-  // makes it behave as a normal calendar month.
   function monthKeyOf(date){
     const start = state.cycleStartDay || 1;
     let y = date.getFullYear();
-    let m = date.getMonth(); // 0-indexed
+    let m = date.getMonth(); 
     if (date.getDate() < start){
       m -= 1;
       if (m < 0){ m = 11; y -= 1; }
@@ -643,7 +647,7 @@
   }
   function shiftMonthKey(key, delta){
     const [y,m] = key.split("-").map(Number);
-    let idx = (m - 1) + delta; // 0-indexed
+    let idx = (m - 1) + delta;
     let newY = y + Math.floor(idx/12);
     const newM = ((idx % 12) + 12) % 12;
     return newY + "-" + pad2(newM+1);
@@ -658,9 +662,13 @@
     return Math.abs(h).toString(36);
   }
 
-  const PALETTE = ["#2b3a55","#a84f38","#55744f","#a07c2c","#6b4e71","#4e7c8b","#7a4e4e","#4f6b3f"];
+  // カテゴリ色をダークモードに応じて出し分け
+  const PALETTE_LIGHT = ["#2b3a55","#a84f38","#55744f","#a07c2c","#6b4e71","#4e7c8b","#7a4e4e","#4f6b3f"];
+  const PALETTE_DARK  = ["#6c8ebf","#d97a66","#82a87a","#d4a742","#a885b0","#7eb7cc","#c28888","#89ad73"];
   function colorForCategory(name){
-    return PALETTE[parseInt(hashCode(name),36) % PALETTE.length];
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const palette = isDark ? PALETTE_DARK : PALETTE_LIGHT;
+    return palette[parseInt(hashCode(name),36) % palette.length];
   }
 
   function formatYen(n){
@@ -1023,9 +1031,14 @@
 
   let undoDeleteTimer = null;
   let undoDeletedTransaction = null;
+  let undoCategoryTimer = null;
+  let undoCategoryData = null;
 
   function showUndoToast(tx){
     clearTimeout(undoDeleteTimer);
+    clearTimeout(undoCategoryTimer);
+    clearTimeout(showToast._t);
+    
     undoDeletedTransaction = tx;
 
     const el = document.getElementById("toast");
@@ -1049,6 +1062,53 @@
 
     undoDeleteTimer = setTimeout(()=>{
       undoDeletedTransaction = null;
+      el.classList.add("hidden");
+      el.classList.remove("undo-toast");
+      el.innerHTML = "";
+    }, 5000);
+  }
+
+  function showCategoryUndoToast(catName, catIndex, changedTxIds) {
+    clearTimeout(undoDeleteTimer);
+    clearTimeout(undoCategoryTimer);
+    clearTimeout(showToast._t);
+
+    undoCategoryData = { catName, catIndex, changedTxIds };
+
+    const el = document.getElementById("toast");
+    el.innerHTML = '<span>カテゴリ「' + escapeHTML(catName) + '」を削除しました</span><button type="button" id="undoCatBtn">元に戻す</button>';
+    el.classList.remove("hidden");
+    el.classList.add("undo-toast");
+
+    document.getElementById("undoCatBtn").onclick = () => {
+      if (!undoCategoryData) return;
+      
+      // カテゴリを元の位置に復元
+      state.categories.splice(undoCategoryData.catIndex, 0, undoCategoryData.catName);
+      
+      // 未分類になった取引を元のカテゴリに復元
+      const ids = new Set(undoCategoryData.changedTxIds);
+      state.transactions.forEach(t => {
+        if (ids.has(t.id)) {
+          t.category = undoCategoryData.catName;
+        }
+      });
+      
+      saveCategories();
+      saveTransactions();
+      renderCatManageList();
+      renderAll();
+
+      undoCategoryData = null;
+      clearTimeout(undoCategoryTimer);
+      el.classList.add("hidden");
+      el.classList.remove("undo-toast");
+      el.innerHTML = "";
+      showToast("カテゴリを元に戻しました");
+    };
+
+    undoCategoryTimer = setTimeout(() => {
+      undoCategoryData = null;
       el.classList.add("hidden");
       el.classList.remove("undo-toast");
       el.innerHTML = "";
@@ -1102,14 +1162,16 @@
   document.getElementById("txSheetOverlay").addEventListener("click", (e)=>{
     if (e.target.id === "txSheetOverlay") closeTxSheet();
   });
+  
   document.getElementById("sheetDeleteBtn").addEventListener("click", ()=>{
     if (!state.sheetTxId) return;
-    if (!confirm("この取引を削除しますか？")) return;
+    // confirmアラートを廃止し、Undoトーストへ移行
+    const deletedTx = state.transactions.find(x => x.id === state.sheetTxId);
     state.transactions = state.transactions.filter(x => x.id !== state.sheetTxId);
     saveTransactions();
     closeTxSheet();
     renderAll();
-    showToast("取引を削除しました");
+    showUndoToast(deletedTx);
   });
 
   document.getElementById("catToggleBtn").addEventListener("click", ()=>{
@@ -1132,14 +1194,18 @@
         btn.textContent = "✕";
         btn.title = "削除";
         btn.addEventListener("click", ()=>{
-          const inUse = state.transactions.some(t => t.category === cat);
-          if (inUse && !confirm('「' + cat + '」を使用している取引は「未分類」になります。削除しますか？')) return;
+          // confirmアラートを廃止し、Undoトーストへ移行
+          const catIndex = state.categories.indexOf(cat);
+          const changedTxIds = state.transactions.filter(t => t.category === cat).map(t => t.id);
+
           state.categories = state.categories.filter(c => c !== cat);
           state.transactions.forEach(t => { if (t.category === cat) t.category = "未分類"; });
           saveCategories();
           saveTransactions();
           renderCatManageList();
           renderAll();
+          
+          showCategoryUndoToast(cat, catIndex, changedTxIds);
         });
         row.appendChild(btn);
       }
@@ -1190,6 +1256,7 @@
     if (e.key === "Enter") document.getElementById("addCatBtn").click();
   });
 
+  // 全データ削除は非常に危険なため、念のため確認アラートを残しています。
   document.getElementById("resetBtn").addEventListener("click", ()=>{
     if (!confirm("本当にすべてのデータを削除しますか？この操作は取り消せません。")) return;
     state.transactions = [];
@@ -1228,6 +1295,14 @@
   document.getElementById("searchInput").addEventListener("input", (e)=>{
     state.searchQuery = e.target.value;
     renderTxList(currentMonthTx());
+  });
+
+  // システムのカラーテーマ変更を検知して即座にカテゴリ色を反映
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    renderAll();
+    if (!document.getElementById("settingsOverlay").classList.contains("hidden")) {
+      renderCatManageList();
+    }
   });
 
   /* ================= Init ================= */
